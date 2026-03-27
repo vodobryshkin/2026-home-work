@@ -10,7 +10,6 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 
 public class StatusHandler implements HttpHandler {
-    private static final int NO_BODY_RESPONSE_LENGTH = -1;
     private static final Logger log = LoggerFactory.getLogger("server");
 
     @Override
@@ -21,16 +20,16 @@ public class StatusHandler implements HttpHandler {
 
         try {
             if (!method.equals(HttpMethod.GET.name()))  {
-                exchange.sendResponseHeaders(StatusCode.MethodNotAllowed.getCode(), NO_BODY_RESPONSE_LENGTH);
+                exchange.sendResponseHeaders(StatusCode.MethodNotAllowed.getCode(), -1);
 
                 return;
             }
 
-            exchange.sendResponseHeaders(StatusCode.Ok.getCode(), NO_BODY_RESPONSE_LENGTH);
+            exchange.sendResponseHeaders(StatusCode.Ok.getCode(), -1);
 
             log.debug("Successfully handled a request on /v0/status endpoint");
         } catch (IOException e) {
-            exchange.sendResponseHeaders(StatusCode.InternalServerError.getCode(), NO_BODY_RESPONSE_LENGTH);
+            exchange.sendResponseHeaders(StatusCode.InternalServerError.getCode(), -1);
         }
 
     }

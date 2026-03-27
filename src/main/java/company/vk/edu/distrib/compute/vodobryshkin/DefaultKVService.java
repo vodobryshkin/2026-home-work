@@ -1,7 +1,6 @@
 package company.vk.edu.distrib.compute.vodobryshkin;
 
 import com.sun.net.httpserver.HttpServer;
-import company.vk.edu.distrib.compute.Dao;
 import company.vk.edu.distrib.compute.KVService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -11,13 +10,11 @@ class DefaultKVService implements KVService {
     private static final Logger log = LoggerFactory.getLogger("server");
 
     private final HttpServer httpServer;
-    private final Dao<byte[]> storage;
 
     private boolean started = false;
     private boolean stopped = false;
 
-    DefaultKVService(Dao<byte[]> storage, HttpServer httpServer) {
-        this.storage = storage;
+    DefaultKVService(HttpServer httpServer) {
         this.httpServer = httpServer;
         log.debug("DefaultKVService was created");
     }

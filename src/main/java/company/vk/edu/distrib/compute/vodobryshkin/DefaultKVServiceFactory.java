@@ -1,13 +1,17 @@
 package company.vk.edu.distrib.compute.vodobryshkin;
 
+import com.sun.net.httpserver.HttpServer;
 import company.vk.edu.distrib.compute.Dao;
 import company.vk.edu.distrib.compute.KVService;
 import company.vk.edu.distrib.compute.KVServiceFactory;
+import company.vk.edu.distrib.compute.vodobryshkin.handlers.StatusHandler;
 
 import java.io.IOException;
+import java.net.InetSocketAddress;
 
 public class DefaultKVServiceFactory extends KVServiceFactory {
     private static final int BACKLOG_SIZE = 128;
+
     private final Dao<byte[]> storage;
 
     public DefaultKVServiceFactory(Dao<byte[]> storage) {
@@ -16,6 +20,10 @@ public class DefaultKVServiceFactory extends KVServiceFactory {
 
     @Override
     public KVService doCreate(int port) throws IOException {
-        return new DefaultKVService(storage, port, BACKLOG_SIZE);
+        HttpServer httpServer = HttpServer.create(new InetSocketAddress(port), BACKLOG_SIZE);
+
+        httpServer.createContext("/v0/status", new StatusHandler());
+
+        return new DefaultKVService(storage, httpServer);
     }
 }

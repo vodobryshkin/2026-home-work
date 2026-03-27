@@ -6,9 +6,6 @@ import company.vk.edu.distrib.compute.KVService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.IOException;
-import java.net.InetSocketAddress;
-
 class DefaultKVService implements KVService {
     private static final int STOP_DELAY = 1;
     private static final Logger log = LoggerFactory.getLogger("server");
@@ -18,10 +15,6 @@ class DefaultKVService implements KVService {
 
     private boolean started = false;
     private boolean stopped = false;
-
-    DefaultKVService(Dao<byte[]> storage, int port, int backlogSize) throws IOException {
-        this(storage, HttpServer.create(new InetSocketAddress(port), backlogSize));
-    }
 
     DefaultKVService(Dao<byte[]> storage, HttpServer httpServer) {
         this.storage = storage;

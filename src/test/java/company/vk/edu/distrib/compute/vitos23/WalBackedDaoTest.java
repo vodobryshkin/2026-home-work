@@ -17,7 +17,10 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+@SuppressWarnings("PMD.DoNotUseThreads") // false positive from Codacy
 class WalBackedDaoTest {
+
+    private static final String TEST_KEY = "key1";
 
     @TempDir
     private Path tempDir;
@@ -41,9 +44,9 @@ class WalBackedDaoTest {
     @Test
     void upsertAndGet() throws IOException {
         byte[] value = "test value".getBytes();
-        dao.upsert("key1", value);
+        dao.upsert(TEST_KEY, value);
 
-        byte[] retrieved = dao.get("key1");
+        byte[] retrieved = dao.get(TEST_KEY);
 
         assertArrayEquals(value, retrieved);
     }
@@ -56,10 +59,10 @@ class WalBackedDaoTest {
     @Test
     void delete() throws IOException {
         byte[] value = "test value".getBytes();
-        dao.upsert("key1", value);
-        dao.delete("key1");
+        dao.upsert(TEST_KEY, value);
+        dao.delete(TEST_KEY);
 
-        assertThrows(NoSuchElementException.class, () -> dao.get("key1"));
+        assertThrows(NoSuchElementException.class, () -> dao.get(TEST_KEY));
     }
 
     @Test
@@ -72,10 +75,10 @@ class WalBackedDaoTest {
         byte[] value1 = "value1".getBytes();
         byte[] value2 = "value2".getBytes();
 
-        dao.upsert("key1", value1);
-        dao.upsert("key1", value2);
+        dao.upsert(TEST_KEY, value1);
+        dao.upsert(TEST_KEY, value2);
 
-        byte[] retrieved = dao.get("key1");
+        byte[] retrieved = dao.get(TEST_KEY);
 
         assertArrayEquals(value2, retrieved);
     }
@@ -84,9 +87,9 @@ class WalBackedDaoTest {
     void upsertEmptyValue() throws IOException {
         byte[] emptyValue = new byte[0];
 
-        dao.upsert("key1", emptyValue);
+        dao.upsert(TEST_KEY, emptyValue);
 
-        byte[] retrieved = dao.get("key1");
+        byte[] retrieved = dao.get(TEST_KEY);
 
         assertArrayEquals(emptyValue, retrieved);
     }
@@ -98,7 +101,7 @@ class WalBackedDaoTest {
 
     @Test
     void upsertNullValue() {
-        assertThrows(IllegalArgumentException.class, () -> dao.upsert("key1", null));
+        assertThrows(IllegalArgumentException.class, () -> dao.upsert(TEST_KEY, null));
     }
 
     @Test
@@ -116,14 +119,14 @@ class WalBackedDaoTest {
         byte[] value1 = "value1".getBytes();
         byte[] value2 = "value2".getBytes();
 
-        dao.upsert("key1", value1);
+        dao.upsert(TEST_KEY, value1);
         dao.upsert("key2", value2);
-        dao.delete("key1");
+        dao.delete(TEST_KEY);
         dao.close();
 
         dao = new WalBackedDao(walFilePath);
 
-        assertThrows(NoSuchElementException.class, () -> dao.get("key1"));
+        assertThrows(NoSuchElementException.class, () -> dao.get(TEST_KEY));
         assertArrayEquals(value2, dao.get("key2"));
     }
 
@@ -266,7 +269,7 @@ class WalBackedDaoTest {
 
     @Test
     void walFileExistsAfterClose() throws IOException {
-        dao.upsert("key1", "value1".getBytes());
+        dao.upsert(TEST_KEY, "value1".getBytes());
         dao.close();
 
         Path walPath = Path.of(walFilePath);

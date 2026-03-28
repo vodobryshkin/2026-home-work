@@ -24,7 +24,9 @@ public class WalBackedDao implements Dao<byte[]> {
     private final Map<String, byte[]> storage = new HashMap<>();
     /// Read-write lock needed to synchronize all write operations (wal write and cache update should be atomic).
     private final ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
-    private RandomAccessFile walFile;
+    private final RandomAccessFile walFile;
+
+    private boolean closed;
 
     public WalBackedDao(String filePath) throws IOException {
         this.walFile = new RandomAccessFile(filePath, "rw");
@@ -33,22 +35,30 @@ public class WalBackedDao implements Dao<byte[]> {
 
     /// Restore [#storage] state from WAL.
     /// This method must be called once in the constructor for implementation to be thread-safe.
-    @SuppressWarnings("checkstyle:missingSwitchDefault") // it conflicts with opposite PMD rule
     private void replayLog() throws IOException {
         while (true) {
             int operationOrdinal = walFile.read();
             if (operationOrdinal < 0) {
                 break;
             }
-            Operation operation = Arrays.stream(Operation.values())
-                    .filter(op -> op.ordinal() == operationOrdinal)
-                    .findFirst()
-                    .orElseThrow(() -> new IllegalArgumentException("Corrupted wal"));
-            String key = new String(readArray(), KEY_CHARSET);
-            switch (operation) {
-                case SET -> storage.put(key, readArray());
-                case DELETE -> storage.remove(key);
-            }
+            replayOperation(operationOrdinal);
+        }
+    }
+
+    /// Moved out of [#replayLog()] to fix Codacy's false positive "Avoid instantiating new objects inside loops"
+    @SuppressWarnings({
+            "PMD.ExhaustiveSwitchHasDefault", // it conflicts with opposite checkstyle rule
+    })
+    private void replayOperation(int operationOrdinal) throws IOException {
+        Operation operation = Arrays.stream(Operation.values())
+                .filter(op -> op.ordinal() == operationOrdinal)
+                .findFirst()
+                .orElseThrow(() -> new IllegalArgumentException("Corrupted wal"));
+        String key = new String(readArray(), KEY_CHARSET);
+        switch (operation) {
+            case SET -> storage.put(key, readArray());
+            case DELETE -> storage.remove(key);
+            default -> throw new AssertionError("impossible"); // for linter
         }
     }
 
@@ -113,11 +123,11 @@ public class WalBackedDao implements Dao<byte[]> {
     public void close() throws IOException {
         lock.writeLock().lock();
         try {
-            if (walFile == null) {
+            if (closed) {
                 return;
             }
             walFile.close();
-            walFile = null;
+            closed = true;
         } finally {
             lock.writeLock().unlock();
         }
@@ -134,7 +144,7 @@ public class WalBackedDao implements Dao<byte[]> {
     }
 
     private void checkOpen() {
-        if (walFile == null) {
+        if (closed) {
             throw new IllegalStateException("Dao is already closed");
         }
     }

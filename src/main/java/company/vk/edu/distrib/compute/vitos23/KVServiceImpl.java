@@ -23,7 +23,7 @@ public class KVServiceImpl implements KVService {
         server = HttpServer.create(new InetSocketAddress(port), 0);
         this.dao = dao;
         server.createContext("/v0/status", this::handleStatusCheck);
-        server.createContext("/v0/entity", this::handleEntityRequest);
+        server.createContext("/v0/entity", this::dispatchEntityRequest);
     }
 
     private void handleStatusCheck(HttpExchange exchange) throws IOException {
@@ -32,17 +32,9 @@ public class KVServiceImpl implements KVService {
     }
 
     @SuppressWarnings("PMD.UseTryWithResources") // Replacement is not possible
-    private void handleEntityRequest(HttpExchange exchange) throws IOException {
+    private void dispatchEntityRequest(HttpExchange exchange) throws IOException {
         try {
-            String id = extractId(exchange.getRequestURI().getQuery());
-
-            switch (exchange.getRequestMethod()) {
-                case "GET" -> handleGet(exchange, id);
-                case "PUT" -> handlePut(exchange, id);
-                case "DELETE" -> handleDelete(exchange, id);
-                case null, default ->
-                        exchange.sendResponseHeaders(HttpCodes.METHOD_NOT_ALLOWED, NO_BODY_RESPONSE_LENGTH);
-            }
+            handleEntityRequest(exchange);
         } catch (NoSuchElementException e) {
             exchange.sendResponseHeaders(HttpCodes.NOT_FOUND, NO_BODY_RESPONSE_LENGTH);
         } catch (IllegalArgumentException e) {
@@ -54,6 +46,18 @@ public class KVServiceImpl implements KVService {
             exchange.sendResponseHeaders(HttpCodes.INTERNAL_ERROR, NO_BODY_RESPONSE_LENGTH);
         } finally {
             exchange.close();
+        }
+    }
+
+    private void handleEntityRequest(HttpExchange exchange) throws IOException {
+        String id = extractId(exchange.getRequestURI().getQuery());
+
+        switch (exchange.getRequestMethod()) {
+            case "GET" -> handleGet(exchange, id);
+            case "PUT" -> handlePut(exchange, id);
+            case "DELETE" -> handleDelete(exchange, id);
+            case null, default ->
+                    exchange.sendResponseHeaders(HttpCodes.METHOD_NOT_ALLOWED, NO_BODY_RESPONSE_LENGTH);
         }
     }
 

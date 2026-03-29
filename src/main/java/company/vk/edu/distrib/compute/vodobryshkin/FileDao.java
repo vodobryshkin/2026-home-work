@@ -10,6 +10,16 @@ import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 import java.util.NoSuchElementException;
 
+/**
+ * Dao на основе файловой системы.
+ * <p>
+ *     Сохраняет всю информацию в директорию storage в рабочей директории.
+ *     Значение под каждым ключом хранится в файле вида storage/&ltkey>
+ * </p>
+ * <p>
+ *     Для кэширования запросов на получение значения по ключу дополнительно используется {@code CacheDao}.
+ * </p>
+ */
 public class FileDao implements Dao<byte[]> {
     private static final Logger log = LoggerFactory.getLogger("server");
 

@@ -7,6 +7,12 @@ import java.util.ArrayDeque;
 import java.util.Deque;
 import java.util.NoSuchElementException;
 
+/**
+ * Декоратор для реализации кэша.
+ * <p>
+ *     Спроектирован таким образом, чтобы кэш можно было тоже использовать как Dao.
+ * </p>
+ */
 public class CacheDao implements Dao<byte[]> {
     private final int limit;
     private final Dao<byte[]> dao;

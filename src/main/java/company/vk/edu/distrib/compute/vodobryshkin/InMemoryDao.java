@@ -8,6 +8,12 @@ import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.concurrent.ConcurrentHashMap;
 
+/**
+ * Dao в оперативной памяти.
+ * <p>
+ *     Сохраняет всю информацию в ConcurrentHashMap.
+ * </p>
+ */
 public class InMemoryDao implements Dao<byte[]> {
     private final Map<String, byte[]> storageDict = new ConcurrentHashMap<>();
     private static final Logger log = LoggerFactory.getLogger("server");

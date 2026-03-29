@@ -40,12 +40,17 @@ public class EntityHandler implements HttpHandler {
 
         String[] partsOfQueryString = queryString.split("=");
 
-        if (partsOfQueryString.length == 0) {
+        if (partsOfQueryString.length != 2) {
             exchange.sendResponseHeaders(StatusCode.BAD_REQUEST.getCode(), -1);
             return;
         }
 
-        if (!"id".equals(partsOfQueryString[0]) || partsOfQueryString.length > 2) {
+        if ("\"\"".equals(partsOfQueryString[1]) || partsOfQueryString[1].isEmpty()) {
+            exchange.sendResponseHeaders(StatusCode.BAD_REQUEST.getCode(), -1);
+            return;
+        }
+
+        if (!"id".equals(partsOfQueryString[0])) {
             exchange.sendResponseHeaders(StatusCode.UNPROCESSABLE_CONTENT.getCode(), -1);
             return;
         }

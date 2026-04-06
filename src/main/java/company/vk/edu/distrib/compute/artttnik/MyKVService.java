@@ -8,18 +8,25 @@ import com.sun.net.httpserver.HttpServer;
 import company.vk.edu.distrib.compute.artttnik.exception.ServerStartException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
 import java.util.NoSuchElementException;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 public class MyKVService implements KVService {
     private static final Logger log = LoggerFactory.getLogger(MyKVService.class);
+
     private final int port;
-    private HttpServer server;
+    private ExecutorService executor;
     private final Dao<byte[]> dao;
+    private HttpServer server;
 
     public MyKVService(int port, Dao<byte[]> dao) {
         this.port = port;
@@ -29,11 +36,16 @@ public class MyKVService implements KVService {
     @Override
     public void start() {
         try {
-            server = HttpServer.create(new InetSocketAddress(port), 0);
+            server = HttpServer.create(
+                    new InetSocketAddress(InetAddress.getLoopbackAddress(), port),
+                    0
+            );
 
             server.createContext("/v0/status", new StatusHandler());
             server.createContext("/v0/entity", new EntityHandler(dao));
-            server.setExecutor(Executors.newFixedThreadPool(4));
+
+            executor = Executors.newFixedThreadPool(4);
+            server.setExecutor(executor);
 
             server.start();
             log.info("KVService started on port {}", port);
@@ -47,14 +59,19 @@ public class MyKVService implements KVService {
     public void stop() {
         if (server != null) {
             server.stop(0);
-
-            try {
-                dao.close();
-            } catch (IOException e) {
-                log.debug("Failed to close Dao", e);
-            }
-            log.info("KVService stopped");
         }
+
+        if (executor != null) {
+            executor.shutdown();
+        }
+
+        try {
+            dao.close();
+        } catch (IOException e) {
+            log.debug("Failed to close Dao", e);
+        }
+
+        log.info("KVService stopped");
     }
 
     private static final class StatusHandler implements HttpHandler {
@@ -79,12 +96,11 @@ public class MyKVService implements KVService {
 
         @Override
         public void handle(HttpExchange exchange) throws IOException {
-            var id = extractId(exchange.getRequestURI().getQuery());
+            var id = extractId(exchange.getRequestURI().getRawQuery());
 
             if (id == null || id.isEmpty()) {
                 log.warn("Bad request: empty id value");
                 exchange.sendResponseHeaders(400, -1);
-
                 return;
             }
 
@@ -153,7 +169,7 @@ public class MyKVService implements KVService {
                 String[] kv = param.split("=", 2);
 
                 if (kv.length == 2 && ID_PARAM.equals(kv[0])) {
-                    return kv[1];
+                    return URLDecoder.decode(kv[1], StandardCharsets.UTF_8);
                 }
             }
 

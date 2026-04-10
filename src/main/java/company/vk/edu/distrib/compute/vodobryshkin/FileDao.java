@@ -9,6 +9,8 @@ import java.nio.file.Files;
 import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 import java.util.NoSuchElementException;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
 /**
  * Dao на основе файловой системы.
@@ -30,7 +32,7 @@ public class FileDao implements Dao<byte[]> {
 
     private final Path rootDirectory;
     private final Dao<byte[]> cache;
-    private final Object lock = new Object();
+    private final Lock lock = new ReentrantLock();
 
     public FileDao() throws IOException {
         this(DEFAULT_ROOT_DIRECTORY, DEFAULT_LIMIT);
@@ -47,7 +49,9 @@ public class FileDao implements Dao<byte[]> {
 
     @Override
     public byte[] get(String key) throws NoSuchElementException, IllegalArgumentException, IOException {
-        synchronized (lock) {
+        lock.lock();
+
+        try {
             try {
                 try {
                     return cache.get(key);
@@ -58,22 +62,30 @@ public class FileDao implements Dao<byte[]> {
                 }
             } catch (NoSuchFileException e) {
                 log.error("Key \"{}\" doesn't exist in a file system.", key, e);
-                throw new NoSuchElementException("Key \"" + key + "\" doesn't exist.");
+                throw e;
             }
+        } finally {
+            lock.unlock();
         }
     }
 
     @Override
     public void upsert(String key, byte[] value) throws IllegalArgumentException, IOException {
-        synchronized (lock) {
+        lock.lock();
+
+        try {
             Files.write(filePath(key), value);
             cache.upsert(key, value);
+        } finally {
+            lock.unlock();
         }
     }
 
     @Override
     public void delete(String key) throws IllegalArgumentException, IOException {
-        synchronized (lock) {
+        lock.lock();
+
+        try {
             try {
                 Files.delete(filePath(key));
             } catch (NoSuchFileException e) {
@@ -85,13 +97,19 @@ public class FileDao implements Dao<byte[]> {
             } catch (NoSuchElementException e) {
                 log.debug("Key \"{}\" doesn't exist in cache.", key);
             }
+        } finally {
+            lock.unlock();
         }
     }
 
     @Override
     public void close() throws IOException {
-        synchronized (lock) {
+        lock.lock();
+
+        try {
             cache.close();
+        } finally {
+            lock.unlock();
         }
     }
 

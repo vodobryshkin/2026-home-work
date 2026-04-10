@@ -6,6 +6,8 @@ import java.io.IOException;
 import java.util.ArrayDeque;
 import java.util.Deque;
 import java.util.NoSuchElementException;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
 /**
  * Декоратор для реализации кэша.
@@ -18,7 +20,7 @@ public class CacheDao implements Dao<byte[]> {
     private final int limit;
     private final Dao<byte[]> dao;
     private final Deque<String> cachedKeys = new ArrayDeque<>();
-    private final Object lock = new Object();
+    private final Lock lock = new ReentrantLock();
 
     public CacheDao(int limit) {
         this(limit, new InMemoryDao());
@@ -35,14 +37,20 @@ public class CacheDao implements Dao<byte[]> {
 
     @Override
     public byte[] get(String key) throws NoSuchElementException, IllegalArgumentException, IOException {
-        synchronized (lock) {
+        lock.lock();
+
+        try {
             return dao.get(key);
+        } finally {
+            lock.unlock();
         }
     }
 
     @Override
     public void upsert(String key, byte[] value) throws IllegalArgumentException, IOException {
-        synchronized (lock) {
+        lock.lock();
+
+        try {
             boolean present;
 
             try {
@@ -61,21 +69,31 @@ public class CacheDao implements Dao<byte[]> {
 
             dao.upsert(key, value);
             cachedKeys.addLast(key);
+        } finally {
+            lock.unlock();
         }
     }
 
     @Override
     public void delete(String key) throws IllegalArgumentException, IOException {
-        synchronized (lock) {
+        lock.lock();
+
+        try {
             dao.delete(key);
             cachedKeys.remove(key);
+        } finally {
+            lock.unlock();
         }
     }
 
     @Override
     public void close() throws IOException {
-        synchronized (lock) {
+        lock.lock();
+
+        try {
             dao.close();
+        } finally {
+            lock.unlock();
         }
     }
 }

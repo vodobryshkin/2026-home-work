@@ -8,6 +8,7 @@ import company.vk.edu.distrib.compute.vodobryshkin.handlers.EntityHandler;
 import company.vk.edu.distrib.compute.vodobryshkin.handlers.StatusHandler;
 
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.net.InetSocketAddress;
 
 public class DefaultKVServiceFactory extends KVServiceFactory {
@@ -15,8 +16,12 @@ public class DefaultKVServiceFactory extends KVServiceFactory {
 
     private final Dao<byte[]> storage;
 
-    public DefaultKVServiceFactory() throws IOException {
-        this(new FileDao());
+    public DefaultKVServiceFactory() {
+        try {
+            this.storage = new FileDao();
+        } catch (IOException e) {
+            throw new UncheckedIOException("Failed to create FileDao", e);
+        }
     }
 
     public DefaultKVServiceFactory(Dao<byte[]> storage) {

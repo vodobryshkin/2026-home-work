@@ -8,34 +8,20 @@ import company.vk.edu.distrib.compute.vodobryshkin.handlers.EntityHandler;
 import company.vk.edu.distrib.compute.vodobryshkin.handlers.StatusHandler;
 
 import java.io.IOException;
-import java.io.UncheckedIOException;
 import java.net.InetSocketAddress;
 
 public class DefaultKVServiceFactory extends KVServiceFactory {
     private static final int BACKLOG_SIZE = 128;
 
-    private final Dao<byte[]> storage;
-
-    public DefaultKVServiceFactory() {
-        try {
-            this.storage = new FileDao();
-        } catch (IOException e) {
-            throw new UncheckedIOException("Failed to create FileDao", e);
-        }
-    }
-
-    public DefaultKVServiceFactory(Dao<byte[]> storage) {
-        super();
-        this.storage = storage;
-    }
-
     @Override
     public KVService doCreate(int port) throws IOException {
+        Dao<byte[]> dao = new FileDao();
+
         HttpServer httpServer = HttpServer.create(new InetSocketAddress(port), BACKLOG_SIZE);
 
         httpServer.createContext("/v0/status", new StatusHandler());
-        httpServer.createContext("/v0/entity", new EntityHandler(storage));
+        httpServer.createContext("/v0/entity", new EntityHandler(dao));
 
-        return new DefaultKVService(httpServer);
+        return new DefaultKVService(httpServer, dao);
     }
 }

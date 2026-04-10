@@ -18,6 +18,7 @@ public class CacheDao implements Dao<byte[]> {
     private final int limit;
     private final Dao<byte[]> dao;
     private final Deque<String> cachedKeys = new ArrayDeque<>();
+    private final Object lock = new Object();
 
     public CacheDao(int limit) {
         this(limit, new InMemoryDao());
@@ -34,39 +35,47 @@ public class CacheDao implements Dao<byte[]> {
 
     @Override
     public byte[] get(String key) throws NoSuchElementException, IllegalArgumentException, IOException {
-        return dao.get(key);
+        synchronized (lock) {
+            return dao.get(key);
+        }
     }
 
     @Override
     public void upsert(String key, byte[] value) throws IllegalArgumentException, IOException {
-        boolean present;
+        synchronized (lock) {
+            boolean present;
 
-        try {
-            dao.get(key);
-            present = true;
-        } catch (NoSuchElementException e) {
-            present = false;
+            try {
+                dao.get(key);
+                present = true;
+            } catch (NoSuchElementException e) {
+                present = false;
+            }
+
+            if (present) {
+                cachedKeys.remove(key);
+            } else if (cachedKeys.size() == limit) {
+                String firstKey = cachedKeys.removeFirst();
+                dao.delete(firstKey);
+            }
+
+            dao.upsert(key, value);
+            cachedKeys.addLast(key);
         }
-
-        if (present) {
-            cachedKeys.remove(key);
-        } else if (cachedKeys.size() == limit) {
-            String firstKey = cachedKeys.removeFirst();
-            dao.delete(firstKey);
-        }
-
-        cachedKeys.addLast(key);
-        dao.upsert(key, value);
     }
 
     @Override
     public void delete(String key) throws IllegalArgumentException, IOException {
-        dao.delete(key);
-        cachedKeys.remove(key);
+        synchronized (lock) {
+            dao.delete(key);
+            cachedKeys.remove(key);
+        }
     }
 
     @Override
     public void close() throws IOException {
-        dao.close();
+        synchronized (lock) {
+            dao.close();
+        }
     }
 }

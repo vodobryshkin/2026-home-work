@@ -30,6 +30,7 @@ public class FileDao implements Dao<byte[]> {
 
     private final Path rootDirectory;
     private final Dao<byte[]> cache;
+    private final Object lock = new Object();
 
     public FileDao() throws IOException {
         this(DEFAULT_ROOT_DIRECTORY, DEFAULT_LIMIT);
@@ -46,47 +47,52 @@ public class FileDao implements Dao<byte[]> {
 
     @Override
     public byte[] get(String key) throws NoSuchElementException, IllegalArgumentException, IOException {
-        byte[] value;
-
-        try {
+        synchronized (lock) {
             try {
-                value = cache.get(key);
-            } catch (NoSuchElementException elementException) {
-                value = Files.readAllBytes(filePath(key));
-                cache.upsert(key, value);
+                try {
+                    return cache.get(key);
+                } catch (NoSuchElementException e) {
+                    byte[] value = Files.readAllBytes(filePath(key));
+                    cache.upsert(key, value);
+                    return value;
+                }
+            } catch (NoSuchFileException e) {
+                log.error("Key \"{}\" doesn't exist in a file system.", key, e);
+                throw new NoSuchElementException("Key \"" + key + "\" doesn't exist.");
             }
-
-            return value;
-        } catch (NoSuchFileException fileException) {
-            log.error("Key \"{}\" doesn't exist in a file system.", key, fileException);
-            throw fileException;
         }
     }
 
     @Override
     public void upsert(String key, byte[] value) throws IllegalArgumentException, IOException {
-        Files.write(filePath(key), value);
-        cache.upsert(key, value);
+        synchronized (lock) {
+            Files.write(filePath(key), value);
+            cache.upsert(key, value);
+        }
     }
 
     @Override
     public void delete(String key) throws IllegalArgumentException, IOException {
-        try {
-            Files.delete(filePath(key));
-        } catch (NoSuchFileException e) {
-            log.warn("Key \"{}\" doesn't exist in file system.", key);
-        }
+        synchronized (lock) {
+            try {
+                Files.delete(filePath(key));
+            } catch (NoSuchFileException e) {
+                log.warn("Key \"{}\" doesn't exist in file system.", key);
+            }
 
-        try {
-            cache.delete(key);
-        } catch (NoSuchElementException e) {
-            log.debug("Key \"{}\" doesn't exist in cache.", key);
+            try {
+                cache.delete(key);
+            } catch (NoSuchElementException e) {
+                log.debug("Key \"{}\" doesn't exist in cache.", key);
+            }
         }
     }
 
     @Override
     public void close() throws IOException {
-        cache.close();
+        synchronized (lock) {
+            cache.close();
+        }
     }
 
     private Path filePath(String pathWay) {

@@ -29,7 +29,9 @@ public class StatusHandler implements HttpHandler {
 
             log.debug("Successfully handled a request on /v0/status endpoint");
         } catch (IOException e) {
-            exchange.sendResponseHeaders(StatusCode.INTERNAL_SERVER_ERROR.getCode(), -1);
+            exchange.sendResponseHeaders(StatusCode.SERVICE_UNAVAILABLE.getCode(), -1);
+        } finally {
+            exchange.close();
         }
 
     }

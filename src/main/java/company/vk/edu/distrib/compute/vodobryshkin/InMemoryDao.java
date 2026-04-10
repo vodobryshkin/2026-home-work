@@ -33,7 +33,7 @@ public class InMemoryDao implements Dao<byte[]> {
     @Override
     public void upsert(String key, byte[] value) throws IllegalArgumentException {
         storageDict.put(key, value);
-        log.debug("Successfully added value={} under key={}", value, key);
+        log.debug("Successfully added value of length={} under key={}", value.length, key);
     }
 
     @Override

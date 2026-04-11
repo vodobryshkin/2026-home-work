@@ -34,7 +34,6 @@ public class KVServiceFactoryArgumentsProvider implements ArgumentsProvider {
         AndecoKVServiceFactory.class,
         MyKVServiceFactory.class,
         InMemoryKVServiceFactory.class,
-        Vitos23KVServiceFactory.class,
         NihuawayKVServiceFactory.class,
         B10nicleKVServiceFactory.class,
         VredakonKVServiceFactory.class,
